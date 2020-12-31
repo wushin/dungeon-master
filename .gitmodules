@@ -1,0 +1,3 @@
+[submodule "src/fury"]
+	path = src/fury
+	url = https://delphic@github.com/delphic/Fury.git
