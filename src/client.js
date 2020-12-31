@@ -7,6 +7,7 @@ let useLocalServer = true;
 // State
 let connected = false; // Acknowledged by websocket server
 
+let UI = require('./client/ui/ui');
 let Connection = require('./client/connection');
 let GameClient = require('./client/game-client');
 let GameServer = require('./common/game-server');
@@ -31,11 +32,9 @@ let sendMessage = (message) => {
 	}
 };
 
-window.onload = (event) => {
+let start = (nick) => {
 	let wsOpened = false;
 
-	let nick = "";
-	// nick = prompt("Enter you nick name", "Player");
 	GameClient.init(nick, sendMessage);
 	// Client should start loading whatever assets are needed
 	// Arguably we should wait before trying to connect to the ws server
@@ -69,6 +68,25 @@ window.onload = (event) => {
 				connected = false;
 				GameClient.ondisconnect();
 			}
+		}
+	});
+};
+
+window.onload = (event) => {
+	let ui = UI.create({});
+	ui.showDialog({
+		title: "Enter Login Details",
+		width: 500,
+		top: 150,
+		fields: [
+			{ id: "username", type: "text", label: "Name:" },
+			{ id: "password", type: "password", label: "Password:" }
+		],
+		confirmLabel: "Confirm",
+		onConfirm: (values) => {
+			// TODO: Send password
+			start(values["username"]);
+			ui.remove();
 		}
 	});
 };
