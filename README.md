@@ -19,6 +19,6 @@ A web based networked multiplayer tool using tile maps for playing TTRPGs, such 
 * First person view
 
 ## Getting Started
-Ensure you've checked out submodules `git submodule init; git submodule update`
-Run `npm install`
-Follow instructions in `docs/build.md`
+* Ensure you've checked out submodules `git submodule init; git submodule update`
+* Run `npm install`
+* Follow instructions in `docs/build.md`
