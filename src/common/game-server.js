@@ -96,16 +96,17 @@ let GameServer = module.exports = (function() {
 
 	exports.init = (sendDelegate, distributeDelegate) => {
 		sendMessage = sendDelegate;
-		// Own distribute - only send to players in same world
 		distributeMessage = (playerId, excludeId, message) => {
-			let players = getGlobalState(playerId).players;
+			distributeDelegate(excludeId, message);
+			// Own distribute - only send to players in same world
+			/*let players = getGlobalState(playerId).players;
 			for (let i = 0, l = players.length; i < l; i++) {
 				if (players[i] !== undefined && players[i] !== null && players[i].id != excludeId) {
 					sendMessage(players[i].id, message);
 					// On server this'll repeat stringify which isn't great, a send with predicate might be cute
 					// or a send to array of ids, but it's fine for now
 				}
-			}
+			}*/
 		};
 	};
 
@@ -161,6 +162,10 @@ let GameServer = module.exports = (function() {
 					return false;
 				}
 				break;
+			case MessageType.CHAT:
+				message.id = id;
+				distributeMessage(id, -1, message);	// Distribute to all including original client
+				break;
 			case MessageType.POSITION:  // This is more a player transform / input sync
 				message.id = id;
 
@@ -186,7 +191,7 @@ let GameServer = module.exports = (function() {
 		if (id === undefined || id === null) {
 			return;
 		}
-		
+
 		let globalState = getGlobalState(id);
 		// Only report disconnection of players which have sent greet
 		if (globalState.players[id]) {

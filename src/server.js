@@ -50,7 +50,7 @@ app.ws("/*", {
 		let json = Buffer.from(message).toString();
 		if (!GameServer.onmessage(ws.id, JSON.parse(json), isBinary)) {
 			// If the GameServer doesn't like the message, kill the connection
-			Connections.disconnect(ws, CloseCode.INVALID_CREDENTIALS);
+			Connections.disconnect(ws, CloseCode.INVALID_CREDENTIALS, "Invalid Password");
 		}
 	},
 	drain: (ws) => { /* Backed up message sent, if we were throttling we could now lift it - should check ws.getBufferedAmount() to drive throttling */ },

@@ -31,16 +31,15 @@ let sendMessage = (message) => {
 		if (!GameServer.onmessage(0, JSON.parse(JSON.stringify(message)))) {
 			// TODO: Handle GameServer being unhappy with message
 		}
-
 	}
 };
 
-let start = (nick, password) => {
+let startConnection = (username, password) => {
 	let wsOpened = false;
 
-	GameClient.setCredentials(nick, password);
-	// Client should start loading whatever assets are needed
-	// Arguably we should wait before trying to connect to the ws server
+	// TODO: Currently GameServer and GameClient are in charge of
+	// gathering and 'verifying' username and password, that should
+	// probably be handled at the client / server level.
 
 	// Try to connect to web socket server
 	// No server present results in an error *then* a close (code 1006) (onopen is never called)
@@ -76,21 +75,7 @@ let start = (nick, password) => {
 };
 
 window.onload = (event) => {
-	GameClient.init(sendMessage);
-
-	let ui = UI.create({});
-	ui.showDialog({
-		title: "Enter Login Details",
-		width: 500,
-		top: 150,
-		fields: [
-			{ id: "username", type: "text", label: "Name:" },
-			{ id: "password", type: "password", label: "Password:" }
-		],
-		confirmLabel: "Confirm",
-		onConfirm: (values) => {
-			start(values["username"], values["password"]);
-			ui.remove();
-		}
-	});
+	// Game-Client should start loading whatever assets are needed
+	// Will call start connection when it is ready
+	GameClient.init(sendMessage, startConnection);
 };

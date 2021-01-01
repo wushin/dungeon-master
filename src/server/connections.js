@@ -61,9 +61,9 @@ let Connections = module.exports = (function() {
 		return false;
 	};
 
-	exports.disconnect = (ws, closeCode) => {
+	exports.disconnect = (ws, closeCode, reason) => {
 		exports.wsclose(ws);
-		ws.end(closeCode, "Disconnected");
+		ws.end(closeCode, reason);
 	};
 
 	// May need a priority system if throttling becomes a thing, always

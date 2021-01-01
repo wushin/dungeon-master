@@ -3,15 +3,10 @@ let Fury = require('../fury/src/fury.js');
 let Player = require('./player');
 let PlayerVisuals = require('./player-visuals');
 let WorldVisuals = require('./world-visuals');
+let GameUI = require('./game-ui');
 
 // glMatrix
 let vec3 = Fury.Maths.vec3, quat = Fury.Maths.quat;
-
-
-// HACK: Global for notifying game start - should attach a listener
-gameStart = function() {
-	gameStarted = true;
-};
 
 // Game Client
 // Handles the visuals, local player movement, and interp of remote clients
@@ -34,7 +29,7 @@ let GameClient = module.exports = (function(){
 
 	let localId = -1;
 	let localNick = "";
-	let _password = "";
+	let password = "";
 	let sendMessage; // fn expects simple obj to send, does not expect you to send id - server will append
 
 	let localPlayer;
@@ -54,33 +49,62 @@ let GameClient = module.exports = (function(){
 		if (camera && camera.ratio) camera.ratio = cameraRatio;
 	};
 
-	exports.init = (sendDelegate) => {
+	exports.init = (sendDelegate, startConnection) => {
 		sendMessage = sendDelegate;
 
 		glCanvas = document.getElementById("fury");
 		window.addEventListener('resize', updateCanvasSize);
 		updateCanvasSize();
 
+		GameUI.init();
+
 		Fury.init("fury", { antialias: false });
+
+		let loadingCallback = null;
 
 		// Start loading required assets
 		PlayerVisuals.init();
 		WorldVisuals.init(() => {
 			assetLoadComplete = true;
+
+			// Act on Message Queue (should be empty now that Game-Client controls flow)
 			if (messageQueue.length > 0) {
 				for(let i = 0, l = messageQueue.length; i < l; i++) {
 					exports.onmessage(messageQueue[i]);
 				}
 				messageQueue.length = 0;
 			}
+
 			lastTime = Date.now();
 			window.requestAnimationFrame(loop);
-		});
-	};
 
-	exports.setCredentials = (nick, pass) => {
-		localNick = nick;
-		password = pass;
+			if (loadingCallback != null) {
+				loadingCallback();
+			}
+		});
+
+		// Request Login Details
+		let onConfirm = (values) => {
+			localNick = values["username"];
+			password = values["password"];
+			if (assetLoadComplete) {
+				startConnection(localNick, password);
+			} else {
+				loadingCallback = () => { startConnection(localNick, password) };
+			}
+		};
+
+		GameUI.showDialog({
+			title: "Enter Login Details",
+			width: 500,
+			top: 150,
+			fields: [
+				{ id: "username", type: "text", label: "Name:" },
+				{ id: "password", type: "password", label: "Password:" }
+			],
+			confirmLabel: "Confirm",
+			onConfirm: onConfirm
+		});
 	};
 
 	let lastTime = 0;
@@ -98,6 +122,12 @@ let GameClient = module.exports = (function(){
 		if (time - lastNetSendTime >= sendInterval) {
 			sendNetUpdate = true;
 			lastNetSendTime = time;
+		}
+
+		if (GameUI.chat && GameUI.chat.input && Fury.Input.keyDown('Enter', true)) {
+			// Minor issue - localhost means you connect and acknoledge immediately so
+			// if you pressed enter to complete the login dialog, it immediately focuses chat
+			GameUI.chat.input.focus();
 		}
 
 		// Update Players
@@ -131,30 +161,42 @@ let GameClient = module.exports = (function(){
 		window.requestAnimationFrame(loop);
 	};
 
+	let chatDto = { type: MessageType.CHAT, text: '' };
+	let sendChatMessage = (message) => {
+		chatDto.text = message;
+		sendMessage(chatDto);
+	};
+
 	exports.onmessage = (message) => {
 		// Wait for initial asset load
 		if (!assetLoadComplete) {
+			console.error("Message received before asset load complete");
+			// Now that we control when to connect, this should be unnecessary so log error
+			// however lets still handle this gracefully
 			messageQueue.push(message);
 			return;
 		}
 
 		switch(message.type) {
 			case MessageType.ACKNOWLEDGE:
-				// NOTE: Will happen post init but not necessarily post asset load
 				localId = message.id;
 				handleInitialServerState(message.data);
 
-				// TODO: Delay this greet until we're sure we have got nick name.
 				sendMessage({ type: MessageType.GREET, nick: localNick, password: password });
+				GameUI.initChat(localId, sendChatMessage);
 				break;
 			case MessageType.CONNECTED:
 				serverState.players[message.id] = message.player;
 				spawnPlayer(message.id, message.player);
+				GameUI.chat.onJoin(message.id, message.player.nick);
 				break;
 			case MessageType.DISCONNECTED:
-				serverState.players[message.id] = null;
-				dropPickups(message.id);
+				GameUI.chat.onLeave(message.id, serverState.players[message.id].nick);
 				despawnPlayer(message.id);
+				serverState.players[message.id] = null;
+				break;
+			case MessageType.CHAT:
+				GameUI.chat.addMessage(message.id, serverState.players[message.id].nick, message.text);
 				break;
 			case MessageType.POSITION:
 				serverState.players[message.id].position = message.position;

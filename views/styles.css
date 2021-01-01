@@ -26,6 +26,10 @@ a:hover {
 	pointer-events: none;
 	/* By default UI overalys shouldn't capture pointer events blocking */
 }
+.overlay.blocking {
+	pointer-events: auto;
+	background-color: rgba(0,0,0,0.5);
+}
 .overlay div {
 	pointer-events: auto;
 }
@@ -95,6 +99,31 @@ a:hover {
 .popup .buttons input:hover {
 	border: 1px solid white;
 }
+.window.chat {
+	position: absolute;
+	border: 1px solid white;
+	border-radius: 2px;
+}
+.window.chat .chatInput {
+	/* TODO: Rely on JS anchoring calculations and just use style sheet for colours */
+	position: absolute;
+	bottom: 0;
+	background-color: transparent;
+	color: white;
+}
+.window.chat .content {
+	overflow-y: scroll;
+}
+.window.chat .content p {
+	margin: 10px;
+}
+.window.chat .left, .window.chat .join {
+	color: #669;
+}
+.window.chat .selfChat {
+	color: #AAA;
+}
+
 #fury {
 	display: block;
 	width: 100%;
