@@ -5,6 +5,7 @@ module.exports = (function() {
 	var codes = {};
 
 	codes.SERVER_FULL = 4001;
+	codes.INVALID_CREDENTIALS = 4002;
 
 	return codes;
 })();

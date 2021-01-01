@@ -49,7 +49,7 @@ var Connection = module.exports = (function() {
 		if (params.onclose) {
 			onclose = params.onclose;
 		} else {
-			onclose = () => {};
+			onclose = (code, reason) => {};
 		}
 		if (params.onmessage) {
 			onmessage = params.onmessage;
@@ -68,7 +68,7 @@ var Connection = module.exports = (function() {
 		};
 		webSocket.onclose = (event) => {
 			if (isDebug) console.log("Web Socket Closed: " + event.code + " - " + event.reason);
-			onclose(event.code);
+			onclose(event.code, event.reason);
 		};
 		webSocket.onmessage = (event) => {
 			let message = JSON.parse(event.data);

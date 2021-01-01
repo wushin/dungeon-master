@@ -3,7 +3,7 @@ let CloseCode = require('./common/websocket-close-codes');
 
 // Config
 // Would be better read from a config file
-const isLocalHost = false;
+const isLocalHost = true;
 const idleTimeout = 120;
 const maxConnections =  8;
 
@@ -22,8 +22,6 @@ Connections.init(maxConnections, isLocalHost);
 
 let GameServer = require('./common/game-server');
 GameServer.init(
-	// For local relay don't want to have to stringfy so we do that in the
-	// functions we pass to the game server/
 	(id, message) => { Connections.sendMessage(id, JSON.stringify(message)); },
 	(id, message) => { Connections.distribute(id, JSON.stringify(message)); }
 );
@@ -50,13 +48,18 @@ app.ws("/*", {
 	message: (ws, message, isBinary) => {
 		// Assuming JSON for now
 		let json = Buffer.from(message).toString();
-		GameServer.onmessage(ws.id, JSON.parse(json), isBinary);
+		if (!GameServer.onmessage(ws.id, JSON.parse(json), isBinary)) {
+			// If the GameServer doesn't like the message, kill the connection
+			Connections.disconnect(ws, CloseCode.INVALID_CREDENTIALS);
+		}
 	},
 	drain: (ws) => { /* Backed up message sent, if we were throttling we could now lift it - should check ws.getBufferedAmount() to drive throttling */ },
 	close: (ws, code, message) => {
 		let id = ws.id;
 		if (Connections.wsclose(ws)) {
-			GameServer.onclientdisconnect(id);
+			if (id !== undefined && id !== null) {
+				GameServer.onclientdisconnect(id);
+			}
 		} else if (code != CloseCode.SERVER_FULL) {
 			if (isLocalHost) console.log("Untracked ws connection closed");
 		}

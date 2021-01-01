@@ -1,7 +1,7 @@
 let CloseCode = require('./common/websocket-close-codes');
 
 // Configuration
-let isLocalHost = false; // Is running on localhost / development machine, not is hosting local server, or in fact hosting a server for other local clients
+let isLocalHost = true; // Is running on localhost / development machine, not is hosting local server, or in fact hosting a server for other local clients
 let useLocalServer = true;
 
 // State
@@ -28,14 +28,17 @@ let sendMessage = (message) => {
 		Connection.send(message);
 	} else if (useLocalServer) {
 		// Deep clone via json stringify / parse - prevents server messing with client objects when using local relay
-		GameServer.onmessage(0, JSON.parse(JSON.stringify(message)));
+		if (!GameServer.onmessage(0, JSON.parse(JSON.stringify(message)))) {
+			// TODO: Handle GameServer being unhappy with message
+		}
+
 	}
 };
 
-let start = (nick) => {
+let start = (nick, password) => {
 	let wsOpened = false;
 
-	GameClient.init(nick, sendMessage);
+	GameClient.setCredentials(nick, password);
 	// Client should start loading whatever assets are needed
 	// Arguably we should wait before trying to connect to the ws server
 
@@ -56,23 +59,25 @@ let start = (nick) => {
 			GameClient.onmessage(message);
 		},
 		onerror: () => { /* Maybe do something IDK */ },
-		onclose: (code) => {
+		onclose: (code, reason) => {
 			if (!wsOpened || code == CloseCode.SERVER_FULL) {
 				if (useLocalServer) {
 					setupLocalServer();
 				} else {
 					// TODO: Show Error message
 				}
-			} else if (acknowledged) {
+			} else if (connected) {
 				// Handle Disconnect
 				connected = false;
-				GameClient.ondisconnect();
+				GameClient.ondisconnect(reason);
 			}
 		}
 	});
 };
 
 window.onload = (event) => {
+	GameClient.init(sendMessage);
+
 	let ui = UI.create({});
 	ui.showDialog({
 		title: "Enter Login Details",
@@ -84,8 +89,7 @@ window.onload = (event) => {
 		],
 		confirmLabel: "Confirm",
 		onConfirm: (values) => {
-			// TODO: Send password
-			start(values["username"]);
+			start(values["username"], values["password"]);
 			ui.remove();
 		}
 	});

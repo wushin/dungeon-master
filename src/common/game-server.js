@@ -8,6 +8,20 @@ let World = require('./world');
 let Bounds = require('../fury/src/bounds');
 let Maths = require('../fury/src/maths');
 
+// Testing Only
+let CredentialChecker = {
+	checkPassword: (password) => {
+		switch (password) {
+			case "admin":
+				return 2;	// Is DM
+			case "password":
+				return 1; // Is Player
+			default:
+				return 0;	// Invalid Password
+		}
+	}
+};
+
 let GameServer = module.exports = (function() {
 	let exports = {};
 
@@ -136,9 +150,16 @@ let GameServer = module.exports = (function() {
 		switch(message.type) {
 			case MessageType.GREET:
 				let nick = message.nick;
-				if (!nick) nick = "Player " + (id + 1);
-				globalState.players[id] = { id: id, nick: nick, position: cloneArray3(world.initialSpawnPosition), rotation: [0,0,0,1] };
-				distributeMessage(id, -1, { type: MessageType.CONNECTED, id: id, player: globalState.players[id] });
+				let pass = message.password;
+				let authLevel = CredentialChecker.checkPassword(pass);
+				if (authLevel > 0) {
+					if (!nick) nick = "Player " + (id + 1);
+					globalState.players[id] = { id: id, nick: nick, auth: authLevel, position: cloneArray3(world.initialSpawnPosition), rotation: [0,0,0,1] };
+					distributeMessage(id, -1, { type: MessageType.CONNECTED, id: id, player: globalState.players[id] });
+				} else {
+					// Disconnect player
+					return false;
+				}
 				break;
 			case MessageType.POSITION:  // This is more a player transform / input sync
 				message.id = id;
@@ -157,9 +178,15 @@ let GameServer = module.exports = (function() {
 				distributeMessage(id, id, message);
 				break;
 		}
+
+		return true;
 	};
 
 	exports.onclientdisconnect = (id) => {
+		if (id === undefined || id === null) {
+			return;
+		}
+		
 		let globalState = getGlobalState(id);
 		// Only report disconnection of players which have sent greet
 		if (globalState.players[id]) {

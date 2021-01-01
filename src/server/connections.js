@@ -61,6 +61,11 @@ let Connections = module.exports = (function() {
 		return false;
 	};
 
+	exports.disconnect = (ws, closeCode) => {
+		exports.wsclose(ws);
+		ws.end(closeCode, "Disconnected");
+	};
+
 	// May need a priority system if throttling becomes a thing, always
 	// want certain messages sent ASAP - arguably this could be achieved
 	// via multiple socket connections, don't know if this is standard however

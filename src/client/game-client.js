@@ -34,6 +34,7 @@ let GameClient = module.exports = (function(){
 
 	let localId = -1;
 	let localNick = "";
+	let _password = "";
 	let sendMessage; // fn expects simple obj to send, does not expect you to send id - server will append
 
 	let localPlayer;
@@ -53,10 +54,8 @@ let GameClient = module.exports = (function(){
 		if (camera && camera.ratio) camera.ratio = cameraRatio;
 	};
 
-	// TODO: Separate nick setting (i.e. greet response)
-	exports.init = (nick, sendDelegate) => {
+	exports.init = (sendDelegate) => {
 		sendMessage = sendDelegate;
-		localNick = nick;
 
 		glCanvas = document.getElementById("fury");
 		window.addEventListener('resize', updateCanvasSize);
@@ -77,6 +76,11 @@ let GameClient = module.exports = (function(){
 			lastTime = Date.now();
 			window.requestAnimationFrame(loop);
 		});
+	};
+
+	exports.setCredentials = (nick, pass) => {
+		localNick = nick;
+		password = pass;
 	};
 
 	let lastTime = 0;
@@ -141,7 +145,7 @@ let GameClient = module.exports = (function(){
 				handleInitialServerState(message.data);
 
 				// TODO: Delay this greet until we're sure we have got nick name.
-				sendMessage({ type: MessageType.GREET, nick: localNick });
+				sendMessage({ type: MessageType.GREET, nick: localNick, password: password });
 				break;
 			case MessageType.CONNECTED:
 				serverState.players[message.id] = message.player;
@@ -159,11 +163,11 @@ let GameClient = module.exports = (function(){
 		}
 	};
 
-	exports.ondisconnect = () => {
+	exports.ondisconnect = (reason) => {
 		if (Fury.Input.isPointerLocked()) {
 			Fury.Input.releasePointerLock();
 		}
-		alert("Disconnected from Server!");
+		alert("Disconnected from Server: " + reason);
 		window.location = window.location;
 	};
 
