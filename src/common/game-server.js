@@ -7,6 +7,7 @@ let MessageType = require('./message-types');
 let World = require('./world');
 let Bounds = require('../fury/src/bounds');
 let Maths = require('../fury/src/maths');
+let ChatCommandExecutor = require('./chat/command-executor');
 
 // Testing Only
 let CredentialChecker = {
@@ -164,7 +165,17 @@ let GameServer = module.exports = (function() {
 				break;
 			case MessageType.CHAT:
 				message.id = id;
-				distributeMessage(id, -1, message);	// Distribute to all including original client
+				if (message.command !== null) {
+					let result = ChatCommandExecutor.executeCommand(message.command);
+					if (result) {
+						message.command = message.command.type;
+						message.text = result;
+						// Distribute result to all including original client
+						distributeMessage(id, -1, message);
+					}
+				} else {
+					distributeMessage(id, -1, message);	// Distribute to all including original client
+				}
 				break;
 			case MessageType.POSITION:  // This is more a player transform / input sync
 				message.id = id;

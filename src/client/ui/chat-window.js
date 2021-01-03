@@ -68,8 +68,16 @@ let ChatWindow = module.exports = (function() {
 		cw.onLeave = (id, name) => {
 			appendMessage(name + " left the game", id == cw.selfId, "left");
 		};
-		cw.addMessage = (id, name, message) => {
-			appendMessage(name + ": " + message, (id == cw.selfId) ? "selfChat" : null);
+		cw.addMessage = (id, name, message, command) => {
+			if (!command) {
+				appendMessage(name + ": " + message, (id == cw.selfId) ? "selfChat" : null);
+			} else {
+				if (command == 'emote') {
+					appendMessage("* " + name + " " + message, "command");
+				} else {
+					appendMessage("* " + name + " /" + command + " " + message, "command");
+				}
+			}
 		};
 
 		return cw;

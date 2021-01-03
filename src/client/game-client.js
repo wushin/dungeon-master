@@ -4,6 +4,7 @@ let Player = require('./player');
 let PlayerVisuals = require('./player-visuals');
 let WorldVisuals = require('./world-visuals');
 let GameUI = require('./game-ui');
+let ChatCommandParser = require('./chat/command-parser');
 
 // glMatrix
 let vec3 = Fury.Maths.vec3, quat = Fury.Maths.quat;
@@ -163,7 +164,19 @@ let GameClient = module.exports = (function(){
 
 	let chatDto = { type: MessageType.CHAT, text: '' };
 	let sendChatMessage = (message) => {
-		chatDto.text = message;
+		// TODO: use ChatCommandParser to check for chat commands!
+		if (ChatCommandParser.isCommand(message)) {
+			let command = {};
+			if (ChatCommandParser.tryParseCommand(command, message)) {
+				chatDto.text = '';
+				chatDto.command = command;
+			} else {
+				// TODO: Show local error
+			}
+		} else {
+			chatDto.text = message;
+			chatDto.command = null;
+		}
 		sendMessage(chatDto);
 	};
 
@@ -196,7 +209,7 @@ let GameClient = module.exports = (function(){
 				serverState.players[message.id] = null;
 				break;
 			case MessageType.CHAT:
-				GameUI.chat.addMessage(message.id, serverState.players[message.id].nick, message.text);
+				GameUI.chat.addMessage(message.id, serverState.players[message.id].nick, message.text, message.command);
 				break;
 			case MessageType.POSITION:
 				serverState.players[message.id].position = message.position;
