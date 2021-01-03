@@ -25,7 +25,16 @@ let ChatWindow = module.exports = (function() {
 		input.type = "text";
 		input.classList.add("chatInput");
 		if (params.onFocus) input.onfocus = params.onFocus;
-		if (params.onBlur) input.onblur = params.onBlur;
+		if (params.onBlur) {
+			input.onblur = (event) => {
+				input.value = '';
+				params.onblur();
+			};
+		} else {
+			input.onblur = (event) => {
+				input.value = '';
+			};
+		}
 		input.onkeydown = (event) => {
 			if (event.key == 'Enter') {
 				if (input.value) sendMessage(input.value);
