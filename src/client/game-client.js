@@ -85,7 +85,7 @@ let GameClient = module.exports = (function(){
 
 		// Request Login Details
 		let onConfirm = (values) => {
-			localNick = values["username"];
+			localNick = values["nick"];
 			password = values["password"];
 			if (assetLoadComplete) {
 				startConnection(localNick, password);
@@ -99,7 +99,7 @@ let GameClient = module.exports = (function(){
 			width: 500,
 			top: 150,
 			fields: [
-				{ id: "username", type: "text", label: "Name:" },
+				{ id: "nick", type: "text", label: "Name:" },
 				{ id: "password", type: "password", label: "Password:" }
 			],
 			confirmLabel: "Confirm",

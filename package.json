@@ -6,6 +6,7 @@
   "license": "MIT",
   "author": "Harry Jones <delphic.uk@gmail.com>",
   "dependencies": {
+    "less": "^4.0.0",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v18.8.0"
   }
 }

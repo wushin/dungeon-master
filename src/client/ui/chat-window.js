@@ -39,8 +39,7 @@ let ChatWindow = module.exports = (function() {
 		element.style.visibility = "hidden";
 		overlay.appendChild(element);
 		UIUtils.applyPositioning(element, params);
-		content.style.height = (element.clientHeight - input.clientHeight) + "px"
-		input.style.width = (params.width - 8) + "px"; 		// TODO: Calculate padding / border rather than hard coding
+		content.style.height = element.clientHeight + "px"
 		element.style.visibility = "";
 
 		let appendMessage = (text, className) => {
