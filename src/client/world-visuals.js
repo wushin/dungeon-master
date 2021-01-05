@@ -33,7 +33,7 @@ let WorldVisuals = module.exports = (function() {
 			material.lightColor = vec3.fromValues(1.0, 1.0, 1.0);
 			material.ambientColor = vec3.fromValues(0.5, 0.5, 0.5);
 			material.fogColor = fogColor;
-			material.fogDensity = 0.125;
+			material.fogDensity = 0; // from: 0.125
 		}
 
 		let createGlowShader = function(shader, color) {
@@ -54,7 +54,7 @@ let WorldVisuals = module.exports = (function() {
 		atlasMaterial.loadTexture = (src, cb) => {
 			let image = new Image();
 			image.onload = () => {
-				let texture = Fury.Renderer.createTextureArray(image, 64, 64, 13, "pixel", true); // "low"/"pixel" quality depending on if going purposefully low res
+				let texture = Fury.Renderer.createTextureArray(image, 64, 64, 13, "low", true); // "low"/"pixel" quality depending on if going purposefully low res
 				// TODO: 13 is based on vorld config, so should actually base it off that
 				atlasMaterial.textures["uSampler"] = texture;
 				applyLightingInfo(atlasMaterial);
@@ -67,7 +67,7 @@ let WorldVisuals = module.exports = (function() {
 		debugMaterial.loadTexture = (src, cb) => {
 			let image = new Image();
 			image.onload = () => {
-				debugMaterial.textures["uSampler"] = Fury.Renderer.createTexture(image, "high");
+				debugMaterial.textures["uSampler"] = Fury.Renderer.createTexture(image, "low" /*"high"*/);
 				cb();
 			};
 			image.src = src;

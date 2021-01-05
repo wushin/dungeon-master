@@ -15,16 +15,21 @@ let GameClient = module.exports = (function(){
 	let exports = {};
 
 	let glCanvas;
-	let resolutionFactor = 1, cameraRatio = 16 / 9;
+	let pixelsPerUnit = 32;	// NOTE: This needs to match the resolution of our texture atlas
+	let resolutionFactor = 2, cameraRatio = 16 / 9, cameraHeight = 540 / pixelsPerUnit;
 	let camera = Fury.Camera.create({
+		type: Fury.Camera.Type.Orthonormal,
 		near: 0.1,
 		far: 10000,
-		fov: 1.0472,
+		//fov: 1.0472,
+		height: cameraHeight,
 		ratio: cameraRatio,
-		position: vec3.fromValues(0, 2, 3)
+		position: vec3.fromValues(0, 10, 0),
+		rotation: Fury.Maths.quatEuler(-90, 0, 0)
 	});
 	camera.targetPosition = vec3.clone(camera.position);
-	camera.playerOffset = vec3.fromValues(0, 1, 0);
+	// camera.playerOffset = vec3.fromValues(0, 1, 0);
+
 	let scene = Fury.Scene.create({ camera: camera, enableFrustumCulling: true });
 	let world = require('../common/world').create();
 
@@ -44,10 +49,13 @@ let GameClient = module.exports = (function(){
 	};
 
 	let updateCanvasSize = (event) => {
-		glCanvas.width = resolutionFactor * glCanvas.clientWidth;
-		glCanvas.height = resolutionFactor * glCanvas.clientHeight;
+		// Q: what happens when clientWidth or clientHeight / factor isn't an integer?
+		glCanvas.width = glCanvas.clientWidth / resolutionFactor;
+		glCanvas.height = glCanvas.clientHeight / resolutionFactor;
 		cameraRatio = glCanvas.clientWidth / glCanvas.clientHeight;
-		if (camera && camera.ratio) camera.ratio = cameraRatio;
+		cameraHeight = glCanvas.height / pixelsPerUnit;
+		if (camera && camera.ratio !== undefined) camera.ratio = cameraRatio;
+		if (camera && camera.height !== undefined) camera.height = cameraHeight;
 	};
 
 	exports.init = (sendDelegate, startConnection) => {
@@ -60,6 +68,9 @@ let GameClient = module.exports = (function(){
 		GameUI.init();
 
 		Fury.init("fury", { antialias: false });
+		// Clear Color #F1ECDF (241,236,223)
+		// Fury.Renderer.clearColor(241.0 / 255.0, 236.0 / 255.0, 223.0 / 255.0);	// Can has hex to RGB converter?
+		// Also this should be "setClearColor" and we should be able to just pass a vec3 or vec4
 
 		let loadingCallback = null;
 
@@ -140,6 +151,7 @@ let GameClient = module.exports = (function(){
 
 		if (localPlayer) {
 			// Update Camera
+			// TODO: Extract to follow camera module
 			vec3.add(camera.targetPosition, camera.playerOffset, localPlayer.position);
 			if (localPlayer.snapCamera) {
 				vec3.copy(camera.position, camera.targetPosition);
@@ -152,6 +164,26 @@ let GameClient = module.exports = (function(){
 			if ((sendNetUpdate && localPlayer.stateDirty) || localPlayer.inputDirty) {
 				localPlayer.stateDirty = localPlayer.inputDirty = false;
 				sendMessage(localPlayer.updateMessage);
+			}
+		} else {
+			// Top down camera
+			// TODO: Mouse Drag - also extract to a top down camera module
+			let unitsPerSecond = 4;
+			if (Fury.Input.keyDown("Up")) {
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3Z, -unitsPerSecond * elapsed);
+			}
+			if (Fury.Input.keyDown("Down")) {
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3Z, unitsPerSecond * elapsed);
+			}
+			if (Fury.Input.keyDown("Left")) {
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3X, - unitsPerSecond * elapsed);
+			}
+			if (Fury.Input.keyDown("Right")) {
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3X, unitsPerSecond * elapsed);
+			}
+			if (Fury.Input.mouseDown(1) && (Fury.Input.MouseDelta[0] != 0 || Fury.Input.MouseDelta[1] != 0)) {
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3X, - Fury.Input.MouseDelta[0] * elapsed);
+				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3Z, - Fury.Input.MouseDelta[1] * elapsed);
 			}
 		}
 
@@ -200,12 +232,12 @@ let GameClient = module.exports = (function(){
 				break;
 			case MessageType.CONNECTED:
 				serverState.players[message.id] = message.player;
-				spawnPlayer(message.id, message.player);
+				// spawnPlayer(message.id, message.player);
 				GameUI.chat.onJoin(message.id, message.player.nick);
 				break;
 			case MessageType.DISCONNECTED:
 				GameUI.chat.onLeave(message.id, serverState.players[message.id].nick);
-				despawnPlayer(message.id);
+				// despawnPlayer(message.id);
 				serverState.players[message.id] = null;
 				break;
 			case MessageType.CHAT:
@@ -239,8 +271,8 @@ let GameClient = module.exports = (function(){
 			// World visuals instanitated - could defer player spawn until this point
 		});
 
-		// TODO: players and tokens are not 1:1 remove this from being automatic
 		// Spawn replicas for all existing players
+		/* players and tokens are not 1:1 hence the comment out
 		for (let i = 0, l = state.players.length; i < l; i++) {
 			if (state.players[i]) {
 				if (state.players[i].id != localId) {
@@ -249,7 +281,7 @@ let GameClient = module.exports = (function(){
 					console.error("Received player data in initial state with local id");
 				}
 			}
-		}
+		}*/
 
 		// TODO: Handle entity state
 	};
