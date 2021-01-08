@@ -73,7 +73,7 @@ var VorldConfig = module.exports = (function() {
 		atlas.tileIndices = [];
 		atlas.tileIndices[blockIds.GRASS] = { side: 1, top: 0, bottom: 2 };
 		atlas.tileIndices[blockIds.SOIL] = { side: 2, top: 2, bottom: 2 };
-		atlas.tileIndices[blockIds.STONE] = { side: 5, top: 5, bottom: 5 };
+		atlas.tileIndices[blockIds.STONE] = { side: 3, top: 3, bottom: 3 };	// Should be 5 but I'm messing
 		atlas.tileIndices[blockIds.STONE_BLOCKS] = { side: 4, top: 4, bottom: 4 };
 		atlas.tileIndices[blockIds.HALF_STONE_BLOCKS] = { side: 4, top: 4, bottom: 4 };
 		atlas.tileIndices[blockIds.BEDROCK] = { side: 6, top: 6, bottom: 6 };

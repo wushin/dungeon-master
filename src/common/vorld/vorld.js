@@ -3,18 +3,39 @@ let Chunk = require('./chunk');
 let Vorld = module.exports = (function() {
 	var exports = {};
 
-	// TODO: Try keying on something we can build without garbage allocation?
+	let getChunkKey = exports.getChunkKey = function(i, j, k) {
+		// return i + "_" + j + "_" + k;
+		// JS numbers are 64 bit
+		// however bit shift treats numbers as 32 bit so do it by multiplication
+		// Can 'bit shift' by 16 (and still have 16 bits left over, could use 21 bits)
+		// Supporting -32768 -> 32767 for a total of 65,535
+		// Shift indices to positive range
+		i += 32768;
+		j += 32768;
+		k += 32768;
+		return i + j * 65535 + k * 4294836225;
+		// ideally this would be i + (j << 16) + (k << 32) but JS says no
+	}
 
 	exports.addChunk = function(vorld, chunk, i, j, k) {
-		vorld.chunks[i+"_"+j+"_"+k] = chunk;  // Also garbage allocation but not as bad as in get
+		chunk.key = getChunkKey(i, j, k);
 		chunk.indices = [i, j, k];
+		vorld.chunks[chunk.key] = chunk;
 	};
 	exports.getChunk = function(vorld, i, j, k) {
-		var key = i+"_"+j+"_"+k;  // You monster - garbage allocation everywhere
+		let key = getChunkKey(i, j, k);
 		if (vorld.chunks[key]) {
 				return vorld.chunks[key];
 		}
 		return null;
+	};
+
+	exports.getChunkKeyForBlock = function(vorld, x, y, z) {
+		var size = vorld.chunkSize;
+		var i = Math.floor(x / size),
+			j = Math.floor(y / size),
+			k = Math.floor(z / size);
+		return getChunkKey(i, j, k);
 	};
 
 	exports.addBlock = function(vorld, x, y, z, block) {
@@ -128,6 +149,10 @@ let Vorld = module.exports = (function() {
 			return Chunk.getBlockRotation(chunk, blockI, blockJ, blockK);
 		}
 		return null;
+	};
+
+	exports.setChunk = function(vorld, key, chunk) {
+		vorld.chunks[key] = chunk;
 	};
 
 	exports.create = function(parameters) {

@@ -21,6 +21,9 @@ var Chunk = module.exports = (function() {
 		}
 		return chunk.blockRotations[i + chunk.size*j + chunk.size*chunk.size*k];
 	};
+	exports.isEmpty = function(chunk) {
+		return chunk.blocks.length > 0;	// Technically we should check they aren't all 0 as well
+	};
 	exports.create = function(parameters) {
 		// TODO: Convert to views on array buffer for memory improvement
 		var chunk = {};
