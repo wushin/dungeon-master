@@ -142,6 +142,14 @@ let GameClient = module.exports = (function(){
 			GameUI.chat.input.focus();
 		}
 
+		// World Update Test
+		if (localId >= 0 && Fury.Input.keyDown("e", true)) {
+			sendMessage({ type: MessageType.WORLD_UPDATE, command: { type: "createRoom", args: [2,1,2, 5,3,5] } });
+			// Interesting part of the previous was test sending a lot of data over the network instantly disconnects you
+			// I'd assume because too large but the error code is "abnormal error" (1006) if uWebSockets
+			// returns the correct codes, too large should be 1009 so that's interesting
+		}
+
 		// Update Players
 		for (let i = 0, l = players.length; i < l; i++) {
 			if (players[i]) {
@@ -167,7 +175,7 @@ let GameClient = module.exports = (function(){
 			}
 		} else {
 			// Top down camera
-			// TODO: Mouse Drag - also extract to a top down camera module
+			// Mouse Drag - TODO: also extract to a top down camera module
 			let unitsPerSecond = 4;
 			if (Fury.Input.keyDown("Up")) {
 				vec3.scaleAndAdd(camera.position, camera.position, Fury.Maths.vec3Z, -unitsPerSecond * elapsed);
@@ -247,6 +255,11 @@ let GameClient = module.exports = (function(){
 				serverState.players[message.id].position = message.position;
 				updatePlayer(message.id, message);
 				break;
+			case MessageType.WORLD_UPDATE:
+				let result = {};	// Would be nice if we could not create a new object everytime
+				world.runCommand(result, message.command);
+				WorldVisuals.updateVisuals(world, result, scene);
+				break;
 		}
 	};
 
@@ -262,10 +275,15 @@ let GameClient = module.exports = (function(){
 		// NOTE: Will happen post init but not necessarily post asset load
 		serverState = state;
 
-		// Load world level and instanitate scene visuals
-		world.createLevel(serverState.level);
+		// TODO: Perform all the commands that led to the current world state
+		// Potentially there might be a template create first before applying the commands
+		if (state.worldUpdates != null && state.worldUpdates.length > 0) {
+			for (let i = 0, l = state.worldUpdates.length; i < l; i++) {
+				world.runCommand(null, state.worldUpdates[i]);
+				// Don't actually care about the result as we're about to regenerate *all* visuals
+			}
+		}
 
-		// TODO: Wait for asset load - test with players already connected OR update visual creation to wait for asset load
 		// Add world objects to render scene
 		WorldVisuals.generateVisuals(world, scene, () => {
 			// World visuals instanitated - could defer player spawn until this point

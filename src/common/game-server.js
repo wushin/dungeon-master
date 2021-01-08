@@ -38,16 +38,15 @@ let GameServer = module.exports = (function() {
 			let instance = {};
 			instance.connectionCount = 0;
 			instance.isComplete = false;
+			instance.world = World.create();
+			instance.world.createLevel("debug");
+
 			instance.globalState = {
-				players: []
+				players: [],
+				worldUpdates: []
+				// TODO: Add all world data rather than just vorld data
 				// TODO: Add entity [] with entity state changes
 			};
-
-			instance.world = World.create();
-
-			let level = "debug";	// TODO: Load something sane
-			instance.globalState.level = level;
-			instance.world.createLevel(level);
 
 			return instance;
 		};
@@ -188,6 +187,17 @@ let GameServer = module.exports = (function() {
 
 				// Distribute to other players
 				distributeMessage(id, id, message); // TODO: Relevancy / Spacial Partitioning plz (players in same section only)
+				break;
+			case MessageType.WORLD_UPDATE:
+				if (globalState.players[id].auth > 1) {
+					// Update local copy of world
+					world.runCommand(null, message.command);	// GARBAGE
+					// Update global state for new joiners
+					globalState.worldUpdates.push(message.command);
+					// Distribute to all including sender
+					message.id = id;
+					distributeMessage(id, -1, message);
+				}
 				break;
 			default:
 				message.id = id;

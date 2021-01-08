@@ -97,12 +97,16 @@ let WorldVisuals = module.exports = (function() {
 
 		let vorld = world.vorld;
 		if (!vorld) {
+			if (callback) callback();
 			return;
 		}
 
 		// "Generating Meshes"
 		// $("#progressBarInner").width("0%");
+		generateVorldMeshes(vorld, scene, callback);
+	};
 
+	let generateVorldMeshes = (vorld, scene, callback) => {
 		var worker = new Worker('./scripts/mesher-worker.js');
 		worker.onmessage = function(e) {
 			if (e.data.mesh) {
@@ -116,7 +120,7 @@ let WorldVisuals = module.exports = (function() {
 					material: atlasMaterial,
 					position: vec3.clone(e.data.offset)
 				});
-				chunkObjects.push(chunkObject);
+				chunkObjects[e.data.chunkKey] = chunkObject;
 			}
 			if (e.data.progress !== undefined) {
 				// $("#progressBarInner").width((e.data.progress * 100) + "%");
@@ -128,9 +132,44 @@ let WorldVisuals = module.exports = (function() {
 				}
 			}
 		};
+		// TODO: Update post to contain list of chunkKeys to generate meshes for
+		// if not passed generate all - i.e. current behaviour, then we dont' need to
+		// build a new vorld update every time (although it might actually be sensible
+		// to send a subset for large worlds cause you know copying data between threads
+		// ain't free)
 		worker.postMessage({
 			chunkData: vorld
 		});
+	};
+
+	let vorldUpdate = {};
+	exports.updateVisuals = (world, chunkKeysToUpdate, scene, callback) => {
+		vorldUpdate.chunkSize = world.vorld.chunkSize;	// Technically we want all data on vorld clones that the mesher needs, currently that's only chunkSize
+		// Question... don't chunks contain their own size? do we really need to pass it to the mesher?
+		vorldUpdate.chunks = {};
+		// Ideally we wouldn't create a new one each time but would instead null
+		// elements when they've been regenerated, however the mesher code enumerates
+		// over keys rather than non-null values, and using `delete` also causes garbage allocation
+		// TODO: Update mesher logic to only use non-null values so we can in fact null out processed
+		// chunks
+
+		let vorld = world.vorld;
+		let chunkKeys = Object.keys(chunkKeysToUpdate);
+		for (let i = 0, l = chunkKeys.length; i < l; i++) {
+			let chunkKey = chunkKeys[i];
+			// Remove existing chunks
+			if (chunkObjects.hasOwnProperty(chunkKey)) {
+				scene.remove(chunkObjects[chunkKey]);
+				delete chunkObjects[chunkKey];	// Not fast but oh well
+			}
+
+			if (vorld.chunks.hasOwnProperty(chunkKey) && vorld.chunks[chunkKey] != null // Vorld has that chunk
+				&& vorld.chunks[chunkKey].blocks.length > 0) {	// Chunk is not empty - TODO: use Chunk method and probably track this manually for greater accuracy / speed
+				vorldUpdate.chunks[chunkKey] = vorld.chunks[chunkKey];
+			}
+		}
+
+		generateVorldMeshes(vorldUpdate, scene, callback);
 	};
 
 	return exports;

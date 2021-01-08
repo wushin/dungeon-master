@@ -5,5 +5,6 @@ var MessageType = module.exports = {
 	GREET: "greet",
 	ACKNOWLEDGE: "acknowledge",
 	CHAT: "chat",
-	POSITION: "position"
+	POSITION: "position",
+	WORLD_UPDATE: "world_update"
 };

@@ -49,17 +49,23 @@ let World = module.exports = (function() {
 		world.entities = [];
 		world.initialSpawnPosition = [0, 1, 0];
 
-		let fill = function(xMin, xMax, yMin, yMax, zMin, zMax, block) {
+		let fill = function(xMin, xMax, yMin, yMax, zMin, zMax, block, updatedChunks) {
 			for (let x = xMin; x <= xMax; x++) {
 				for (let z = zMin; z <= zMax; z++) {
 					for (let y = yMin; y <= yMax; y++) {
 						Vorld.addBlock(vorld, x, y, z, block);
+						if (updatedChunks) {
+							updatedChunks[Vorld.getChunkKeyForBlock(vorld, x, y, z)] = true;
+							// TODO: Check for adjecent affected chunks as we need to add those too
+							// Vorld.isOnChunkBorder(vorld, x, y, z) ?  Or maybe we should have optional parameter
+							// on add and remove block that tells you affected Chunks instead
+						}
 					}
 				}
 			}
 		};
 
-		let createRoom = function(x,y,z, w,h,d) {
+		let createRoom = function(x,y,z, w,h,d, updatedChunks) {
 			let wall = VorldConfig.BlockIds.STONE_BLOCKS;
 			let floor = VorldConfig.BlockIds.STONE;
 			let ceiling = VorldConfig.BlockIds.STONE;
@@ -67,13 +73,13 @@ let World = module.exports = (function() {
 			// existing w = 9 x = -4
 			// d = 9 z = -4
 			// h = 4 y = 0
-			fill(x,x+w-1, y,y+h-1, z+d,z+d, wall);
-			fill(x,x+w-1, y,y+h-1, z-1,z-1, wall);
-			fill(x+w,x+w, y,y+h-1, z,z+d-1, wall);
-			fill(x-1,x-1, y,y+h-1, z,z+d-1, wall);
+			fill(x,x+w-1, y,y+h-1, z+d,z+d, wall, updatedChunks);
+			fill(x,x+w-1, y,y+h-1, z-1,z-1, wall, updatedChunks);
+			fill(x+w,x+w, y,y+h-1, z,z+d-1, wall, updatedChunks);
+			fill(x-1,x-1, y,y+h-1, z,z+d-1, wall, updatedChunks);
 
-			fill(x,x+w-1, y+h,y+h, z,z+d-1, ceiling);
-			fill(x,x+w-1, y-1,y-1, z,z+d-1, floor);
+			fill(x,x+w-1, y+h,y+h, z,z+d-1, ceiling, updatedChunks);
+			fill(x,x+w-1, y-1,y-1, z,z+d-1, floor, updatedChunks);
 		}
 
 		let createTestSteps = function(level) {
@@ -82,10 +88,22 @@ let World = module.exports = (function() {
 			level.push(world.addBox(-0.25, 0.25, 0, 0.5, -4, -3.5));
 		};
 
+		world.runCommand = (result, command) => {	// This isn't really a hot loop do we defo want a result object when sometimes we don't care?
+			let args = command.args;
+			switch(command.type) {
+				case "createRoom":
+					createRoom(args[0], args[1], args[2], args[3], args[4], args[5], result);
+					// Writes updated chunk keys as the keys of the result arguably Object.keys(result) would be better but oh well
+					// In order to support Undo we probably need to store more data (i.e. what you just overwrote)... on vorld at least
+					// could use that extra 16 bits in chunkKeys for history, perhaps.
+					break;
+			}
+		};
 
 		world.createLevel = (level) => {
-			// TODO: Some actual logic
-			createRoom(-5,0,-10, 11,5,11);
+			// TODO: Load from... somewhere
+			// Some actual logic maybe
+			// This could also be a template to start from then just have a command history on top.
 		};
 
 		// TODO: Create spawn methods with listeners

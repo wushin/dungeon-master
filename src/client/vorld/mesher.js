@@ -290,7 +290,7 @@ var Mesher = module.exports = (function() {
 				// y = j - Math.floor(chunk.size/2.0);
 				for(k = 0; k < chunk.size; k++) {
 					// z = k - Math.floor(chunk.size/2.0);
-					delegate(chunk, i, j, k, i, j, k);
+					delegate(chunk, i, j, k, i, j, k);	// Well this is stupid, we're passing i,j,k as x,y,z because including an offset but if we're doing that why are we even taking an x,y,z in the method?
 				}
 			}
 		}
@@ -305,6 +305,7 @@ var Mesher = module.exports = (function() {
 				postMessage({
 					mesh: mesh,
 					offset: [indices[0] * vorld.chunkSize, indices[1] * vorld.chunkSize, indices[2] * vorld.chunkSize],
+					chunkKey: keys[i],
 					progress: i / l
 				});
 			} else {
