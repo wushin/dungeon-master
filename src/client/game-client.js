@@ -122,6 +122,10 @@ let GameClient = module.exports = (function(){
 	let lastTime = 0;
 	let lastNetSendTime = 0, sendInterval = 1/ 20;
 
+	let viewPortPos = [];
+	let downPosition = vec3.create();
+	let upPosition = vec3.create();
+
 	let loop = () => {
 		let time = Date.now();
 		let elapsed = time - lastTime;
@@ -143,8 +147,46 @@ let GameClient = module.exports = (function(){
 		}
 
 		// World Update Test
+
+		// TODO: based on edit mode toggle (with actual UI please)
+		// TODO: Extract to it's own module
+		// TODO: Wire frame preview
+
+		// Caches world position down on mouse click
+		// and then on mouse up calculates world position
+		// and sends a command to create a room between them
+		// TODO: create room should set internal voxels to 0
+		if (Fury.Input.mouseDown(0, true)) {
+			viewPortPos[0] = Fury.Input.getMouseViewportX();
+			viewPortPos[1] = 1- Fury.Input.getMouseViewportY();
+			// Either our getMouseViewportY is wrong, or our viewportToWorld is wrong, this 1- should be inside the method if the viewportToWorld is correct
+			// Is top left 0,0 or bottom left 0,0 in viewports normally?
+			camera.viewportToWorld(downPosition, viewPortPos, camera.position.y);
+		}
+
+		if (localId >= 0 && Fury.Input.mouseUp(0)) {
+			viewPortPos[0] = Fury.Input.getMouseViewportX();
+			viewPortPos[1] = Fury.Input.getMouseViewportY();
+			camera.viewportToWorld(upPosition, viewPortPos, camera.position.y);
+
+			let args = [];
+			let xMin = Math.floor(Math.min(downPosition[0], upPosition[0])), xMax = Math.ceil(Math.max(downPosition[0], upPosition[0]));
+			let zMin = Math.floor(Math.min(downPosition[2], upPosition[2])), zMax = Math.ceil(Math.max(downPosition[2], upPosition[2]));
+
+			args[0] = xMin;
+			args[1] = 1;
+			args[2] = zMin;
+
+			args[3] = xMax - args[0];
+			args[4] = 3;
+			args[5] = zMax - args[2];
+
+			if (args[3] > 0 && args[5] > 0) {
+				sendMessage({ type: MessageType.WORLD_UPDATE, command: { type: "draw", args: args } });
+			}
+		}
+
 		if (localId >= 0 && Fury.Input.keyDown("e", true)) {
-			sendMessage({ type: MessageType.WORLD_UPDATE, command: { type: "createRoom", args: [2,1,2, 5,3,5] } });
 			// Interesting part of the previous was test sending a lot of data over the network instantly disconnects you
 			// I'd assume because too large but the error code is "abnormal error" (1006) if uWebSockets
 			// returns the correct codes, too large should be 1009 so that's interesting

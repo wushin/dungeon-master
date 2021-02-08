@@ -55,14 +55,45 @@ let World = module.exports = (function() {
 					for (let y = yMin; y <= yMax; y++) {
 						Vorld.addBlock(vorld, x, y, z, block);
 						if (updatedChunks) {
-							updatedChunks[Vorld.getChunkKeyForBlock(vorld, x, y, z)] = true;
-							// TODO: Check for adjecent affected chunks as we need to add those too
-							// Vorld.isOnChunkBorder(vorld, x, y, z) ?  Or maybe we should have optional parameter
-							// on add and remove block that tells you affected Chunks instead
+							Vorld.getChunkAdjacency(vorld, x, y, z, updatedChunks);
 						}
 					}
 				}
 			}
+		};
+
+		let conditionalFill = function(xMin, xMax, yMin, yMax, zMin, zMax, block, predicate, updatedChunks) {
+			for (let x = xMin; x <= xMax; x++) {
+				for (let z = zMin; z <= zMax; z++) {
+					for (let y = yMin; y <= yMax; y++) {
+						if (predicate(x,y,z)) {
+							Vorld.addBlock(vorld, x, y, z, block);
+							if (updatedChunks) {
+								Vorld.getChunkAdjacency(vorld, x, y, z, updatedChunks);
+							}
+						}
+					}
+				}
+			}
+		};
+
+		let wallPredicate = (x, y, z) => {
+			return !Vorld.getBlock(vorld, x, 0, z);
+		};
+
+		let draw = function(x,y,z, w,h,d, updatedChunks) {
+			let wall = VorldConfig.BlockIds.WOOD;
+			let floor = VorldConfig.BlockIds.STONE;
+			let empty = 0;
+
+			conditionalFill(x,x+w-1, y,y+h-1, z+d,z+d, wall, wallPredicate, updatedChunks);
+			conditionalFill(x,x+w-1, y,y+h-1, z-1,z-1, wall, wallPredicate, updatedChunks);
+			conditionalFill(x+w,x+w, y,y+h-1, z,z+d-1, wall, wallPredicate, updatedChunks);
+			conditionalFill(x-1,x-1, y,y+h-1, z,z+d-1, wall, wallPredicate, updatedChunks);
+
+			fill(x,x+w-1, y,y+h-1, z,z+d-1, empty, updatedChunks);
+
+			fill(x,x+w-1, y-1,y-1, z,z+d-1, floor, updatedChunks);
 		};
 
 		let createRoom = function(x,y,z, w,h,d, updatedChunks) {
@@ -91,11 +122,16 @@ let World = module.exports = (function() {
 		world.runCommand = (result, command) => {	// This isn't really a hot loop do we defo want a result object when sometimes we don't care?
 			let args = command.args;
 			switch(command.type) {
+				// TODO: Add draw floor, also separate the world voxels from the representation, we want to build walls around the floors yes, but most of them can be implicit?
+				// That or we have to take a pass over the voxels when we draw new floors... maybe that is better. hmmm.
 				case "createRoom":
 					createRoom(args[0], args[1], args[2], args[3], args[4], args[5], result);
 					// Writes updated chunk keys as the keys of the result arguably Object.keys(result) would be better but oh well
 					// In order to support Undo we probably need to store more data (i.e. what you just overwrote)... on vorld at least
 					// could use that extra 16 bits in chunkKeys for history, perhaps.
+					break;
+				case "draw":
+					draw(args[0], args[1], args[2], args[3], args[4], args[5], result);
 					break;
 			}
 		};

@@ -37,6 +37,17 @@ let Vorld = module.exports = (function() {
 			k = Math.floor(z / size);
 		return getChunkKey(i, j, k);
 	};
+	exports.getChunkAdjacency = function(vorld, x, y, z, adjacentChunks) {
+		for (let xOffset = -1; xOffset <= 1; xOffset++) {
+			for (let yOffset = -1; yOffset <= 1; yOffset++) {
+				for (let zOffset = -1; zOffset <= 1; zOffset++) {
+					// Could probably be smarter about this, if i == 0 || i == chunk.size -1 etc
+					// but this'll do
+					adjacentChunks[exports.getChunkKeyForBlock(vorld, x, y, z)] = true;
+				}
+			}
+		}
+	}
 
 	exports.addBlock = function(vorld, x, y, z, block) {
 		var size = vorld.chunkSize;
